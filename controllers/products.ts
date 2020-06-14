@@ -1,5 +1,12 @@
+import { MongoClient } from "https://deno.land/x/mongo@v0.8.0/mod.ts";
 import { v4 } from 'https://deno.land/x/uuid/mod.ts'
 import { Product } from '../types.ts'
+
+const client = new MongoClient();
+client.connectWithUri("mongodb://localhost:27017");
+
+const db = client.database("denoApp");
+const products = db.collection("products");
 
 let products: Product[] = [
     {
