@@ -1,5 +1,12 @@
+import { MongoClient } from "https://deno.land/x/mongo@v0.8.0/mod.ts";
 import { v4 } from 'https://deno.land/x/uuid/mod.ts'
 import { Product } from '../types.ts'
+
+const client = new MongoClient();
+client.connectWithUri("mongodb://localhost:27017");
+
+const db = client.database("denoApp");
+const good = db.collection("products");
 
 let products: Product[] = [
     {
@@ -24,17 +31,20 @@ let products: Product[] = [
 
 // @desc    Get all products
 // @route   GET /api/v1/products
-const getProducts = ({ response }: {response: any}) => {
+const getProducts = async({ response }: {response: any}) => {
+    const all_products = await good.find({ name: { $ne: null } });
     response.body = {
         success: true,
-        data: products
+        data: all_products
     }
 }
 
 // @desc    Get single product
 // @route   GET /api/v1/products/:id
-const getProduct = ({ params, response }: {params: {id: string}, response: any}) => {
-    const product: Product | undefined = products.find(p => p.id === params.id)
+const getProduct = async({ params, response }: {params: {id: string}, response: any}) => {
+    const product: Product | undefined = await good.findOne(
+        { _id: { "$oid": params.id } },
+      );
     if (product) {
         response.status = 200
         response.body = {
@@ -62,9 +72,7 @@ const addProduct = async({ request, response }: {request: any, response: any}) =
             msg: "No data"
         }
     } else {
-        const product: Product = reqBody.value
-        product.id = v4.generate()
-        products.push(product)
+        const product: Product = await good.insertOne(reqBody.value);
         response.status = 201
         response.body = {
             success: true,
@@ -104,22 +112,20 @@ const updateProduct = async({ params, request, response }: {params: {id: string}
 // @desc    delete a single product
 // @route   DELETE /api/v1/products/:id
 const delProduct = ({ params, response }: {params: {id: string}, response: any}) => {
-    const product: Product | undefined = products.find(p => p.id === params.id)
-    if (product) {
 
-        products = products.filter(p => p.id !== product.id)
-
+    try {
+        good.deleteOne({ _id: { "$oid": params.id } })
         response.status = 200
         response.body = {
             success: true,
-            data: products
+            data: "Deleted."
         }
-    } else {
+    } catch (error) {
         response.status = 404
         response.body = {
-            success: false,
-            msg: "product not found"
-        }
+            success: true,
+            msg: error  
+        }     
     }
 }
 
