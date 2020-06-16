@@ -1,33 +1,13 @@
 import { MongoClient } from "https://deno.land/x/mongo@v0.8.0/mod.ts";
+import { config } from "https://deno.land/x/dotenv/mod.ts";
 import { v4 } from 'https://deno.land/x/uuid/mod.ts'
 import { Product } from '../types.ts'
 
 const client = new MongoClient();
-client.connectWithUri("mongodb://localhost:27017");
+client.connectWithUri(`mongodb+srv://${config().DB_USER}:${config().DB_PASSWORD}@clusterus-zplkn.mongodb.net/${config().DB_NAME}?retryWrites=true&w=majority`);
 
 const db = client.database("denoApp");
 const good = db.collection("products");
-
-let products: Product[] = [
-    {
-        id: "1",
-        name: "product number one",
-        info: "This is product one",
-        price: 29.99,
-    },
-    {
-        id: "2",
-        name: "product number two",
-        info: "This is product two",
-        price: 39.99,
-    },
-    {
-        id: "3",
-        name: "product number three",
-        info: "This is product three",
-        price: 49.99,
-    }
-]
 
 // @desc    Get all products
 // @route   GET /api/v1/products
@@ -86,35 +66,32 @@ const addProduct = async({ request, response }: {request: any, response: any}) =
 // @route   PUT /api/v1/products/:id
 const updateProduct = async({ params, request, response }: {params: {id: string}, request: any, response: any}) => {
     
-    const product: Product | undefined = products.find(p => p.id === params.id)
-
-    if (product) {
-        const reqBody = await request.body()
-
-        const updateData: {name?: string, info?: string, price?: number} = reqBody.value
-
-        products = products.map ( p => p.id === product.id ? {...p, ...updateData}: p)
-
+    try {
+        await good.updateOne(
+            { _id: { "$oid": params.id } },
+            { $set: { price: 0 } },
+          );
         response.status = 200
         response.body = {
             success: true,
-            data: products
+            msg: "updated success"
         }
-    } else {
+        
+    } catch (error) {
         response.status = 404
         response.body = {
             success: false,
             msg: "product not found"
-        }
+        } 
     }
 }
 
 // @desc    delete a single product
 // @route   DELETE /api/v1/products/:id
-const delProduct = ({ params, response }: {params: {id: string}, response: any}) => {
+const delProduct = async({ params, response }: {params: {id: string}, response: any}) => {
 
     try {
-        good.deleteOne({ _id: { "$oid": params.id } })
+        await good.deleteOne({ _id: { "$oid": params.id } })
         response.status = 200
         response.body = {
             success: true,

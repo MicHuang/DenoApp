@@ -1,3 +1,3 @@
 #! /bin/bash
 
-deno run -A server.ts
+deno run --allow-net --allow-read --allow-write --allow-plugin --unstable server.ts
